@@ -6,6 +6,8 @@
   <title>릴레이 동화 작가들 - 한 문장씩 이어 쓰는 우리 반 이야기</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PeerJS: 별도 서버 설정 없이도 1인 1태블릿 실시간 P2P 방 연결 지원 -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <!-- Google Fonts: Jua (귀여운 동화 제목용) & Noto Sans KR (깔끔한 본문용) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -601,12 +603,18 @@
     // ==================== 앱 상태 ====================
     const state = {
       mode: 'online', // 'online' | 'local'
+      transport: 'p2p', // 'firebase' | 'p2p'
       userId: null,
       db: null,
       auth: null,
       appId: typeof __app_id !== 'undefined' ? __app_id : 'relay-fairytale-app',
       firebaseReady: false,
       customApiKey: '',
+
+      // P2P (PeerJS) 실시간 연결 상태
+      peer: null,
+      peerConns: [],
+      hostConn: null,
 
       // 로비 선택 상태
       createAvatar: '🐱',
@@ -636,13 +644,21 @@
     function showToast(msg, emoji = '✨') {
       const box = $('toastBox');
       $('toastMessage').innerHTML = `<span>${emoji}</span><span>${msg}</span>`;
-      box.classList.remove('opacity-0', 'translate-y-3');
+      box.classList.remove('opacity-0', 'translate-y-2');
       box.classList.add('opacity-100', 'translate-y-0');
-      clearTimeout(toastTimer);
+      if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
         box.classList.remove('opacity-100', 'translate-y-0');
-        box.classList.add('opacity-0', 'translate-y-3');
+        box.classList.add('opacity-0', 'translate-y-2');
       }, 2800);
+    }
+
+    function switchView(viewId) {
+      ['viewLobby', 'viewWaiting', 'viewWriting', 'viewBook'].forEach((id) => {
+        const el = $(id);
+        if (el) el.classList.toggle('hidden', id !== viewId);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function copyTextToClipboard(text) {
@@ -651,25 +667,18 @@
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
+      textarea.focus();
       textarea.select();
       try {
         document.execCommand('copy');
         showToast('클립보드에 복사되었어요!', '📋');
       } catch (err) {
-        showToast('복사에 실패했어요. 직접 선택해 복사해 주세요.', '😥');
+        showToast('복사에 실패했어요. 직접 복사해 주세요.', '😥');
       }
       document.body.removeChild(textarea);
     }
 
-    function switchView(viewName) {
-      ['viewLobby', 'viewWaiting', 'viewWriting', 'viewBook'].forEach((id) => {
-        $(id).classList.add('hidden');
-      });
-      $(viewName).classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // ==================== Firebase 초기화 (필수 규칙 준수) ====================
+    // ==================== Firebase 초기화 (필수 규칙 준수 + P2P 자동 폴백) ====================
     async function initFirebase() {
       try {
         if (typeof __firebase_config === 'undefined' || !__firebase_config) {
@@ -689,15 +698,48 @@
 
         state.userId = state.auth.currentUser?.uid || crypto.randomUUID();
         state.firebaseReady = true;
+        state.transport = 'firebase';
         $('connectionBadge').classList.remove('hidden');
         $('connectionBadge').classList.add('sm:inline-flex');
       } catch (error) {
+        // Firebase 설정이 없는 환경에서는 자동으로 P2P 실시간 통신 모드 활성화
         state.firebaseReady = false;
-        state.userId = 'local-' + Math.random().toString(36).slice(2, 10);
+        state.transport = 'p2p';
+        state.userId = 'writer-' + Math.random().toString(36).slice(2, 10);
         const badge = $('connectionBadge');
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span>오프라인/단독 모드`;
-        badge.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
-        badge.classList.add('sm:inline-flex', 'bg-amber-50', 'text-amber-700', 'border-amber-200');
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>실시간 P2P 연결`;
+        badge.classList.remove('hidden');
+        badge.classList.add('sm:inline-flex', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+      }
+    }
+
+    // ==================== P2P 실시간 브로드캐스트 헬퍼 ====================
+    function getPeerRoomId(code) {
+      return `relay-fairytale-room-${code}`;
+    }
+
+    function broadcastP2PState() {
+      if (state.transport !== 'p2p' || !state.roomData) return;
+      state.peerConns = state.peerConns.filter((c) => c && c.open);
+      state.peerConns.forEach((conn) => {
+        try {
+          conn.send({ type: 'STATE', roomData: state.roomData });
+        } catch (_) {}
+      });
+    }
+
+    function cleanupP2P() {
+      state.peerConns.forEach((c) => {
+        try { c.close(); } catch (_) {}
+      });
+      state.peerConns = [];
+      if (state.hostConn) {
+        try { state.hostConn.close(); } catch (_) {}
+        state.hostConn = null;
+      }
+      if (state.peer) {
+        try { state.peer.destroy(); } catch (_) {}
+        state.peer = null;
       }
     }
 
@@ -838,9 +880,13 @@
           state.roomData.bookMoral = parsed.moral || '';
           $('bookTitle').textContent = parsed.title;
           $('bookMoral').textContent = parsed.moral || '';
-          if (state.mode === 'online' && state.firebaseReady && state.roomCode) {
-            const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
-            await updateDoc(roomRef, { bookTitle: parsed.title, bookMoral: parsed.moral || '' }).catch(() => {});
+          if (state.mode === 'online' && state.roomCode) {
+            if (state.transport === 'firebase' && state.firebaseReady) {
+              const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
+              await updateDoc(roomRef, { bookTitle: parsed.title, bookMoral: parsed.moral || '' }).catch(() => {});
+            } else if (state.transport === 'p2p') {
+              broadcastP2PState();
+            }
           }
           if (showNotice) showToast('멋진 동화 제목이 완성되었어요!', '📚');
         }
@@ -1021,11 +1067,10 @@
       ANIMALS.forEach((emoji) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `avatar-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 bg-white flex items-center justify-center text-2xl sm:text-3xl ${
+        btn.className = `avatar-btn w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 bg-white flex items-center justify-center text-xl sm:text-2xl ${
           emoji === selectedAvatar ? 'selected' : 'border-amber-200/80 hover:border-amber-400'
         }`;
         btn.textContent = emoji;
-        btn.setAttribute('aria-label', `동물 캐릭터 ${emoji}`);
         btn.addEventListener('click', () => {
           onSelect(emoji);
           renderAvatarGrid(containerId, emoji, onSelect);
@@ -1035,42 +1080,40 @@
     }
 
     function populateThemeSelects() {
-      ['createThemeSelect', 'localThemeSelect'].forEach((id) => {
-        const sel = $(id);
-        sel.innerHTML = '';
+      ['createThemeSelect', 'localThemeSelect'].forEach((selectId) => {
+        const select = $(selectId);
+        if (!select) return;
+        select.innerHTML = '';
         STORY_THEMES.forEach((theme) => {
           const opt = document.createElement('option');
           opt.value = theme.id;
           opt.textContent = theme.label;
-          sel.appendChild(opt);
+          select.appendChild(opt);
         });
       });
     }
 
     function renderLocalPlayersList() {
-      const list = $('localPlayersList');
-      list.innerHTML = '';
-      state.localPlayers.forEach((p, idx) => {
-        const pill = document.createElement('div');
-        pill.className = 'inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border-2 border-indigo-200 font-bold text-sm text-stone-700 shadow-sm';
-        pill.innerHTML = `
-          <span class="text-lg">${p.avatar}</span>
-          <span>${idx + 1}. ${p.name}</span>
-          <button type="button" class="ml-1 text-stone-400 hover:text-rose-500 font-black" aria-label="삭제">✕</button>
+      const container = $('localPlayersList');
+      if (!container) return;
+      container.innerHTML = '';
+      state.localPlayers.forEach((player, index) => {
+        const chip = document.createElement('div');
+        chip.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border-2 border-indigo-200 text-sm font-bold text-stone-700 shadow-sm';
+        chip.innerHTML = `
+          <span>${player.avatar}</span>
+          <span>${escapeHtml(player.name)}</span>
+          <button type="button" class="ml-1 text-stone-400 hover:text-rose-500 font-black text-xs" aria-label="삭제">✕</button>
         `;
-        pill.querySelector('button').addEventListener('click', () => {
-          if (state.localPlayers.length <= 2) {
-            showToast('최소 2명의 친구가 필요해요!', '🐾');
-            return;
-          }
-          state.localPlayers.splice(idx, 1);
+        chip.querySelector('button').addEventListener('click', () => {
+          state.localPlayers.splice(index, 1);
           renderLocalPlayersList();
         });
-        list.appendChild(pill);
+        container.appendChild(chip);
       });
     }
 
-    // ==================== 방 생성 / 입장 / 구독 (멀티플레이어) ====================
+    // ==================== 방 생성 / 입장 / 구독 (멀티플레이어: Firebase + P2P 지원) ====================
     function generateRoomCode() {
       return String(Math.floor(1000 + Math.random() * 9000));
     }
@@ -1083,46 +1126,129 @@
         return;
       }
 
-      if (!state.firebaseReady) {
-        showToast('실시간 서버에 연결되지 않아 1대로 같이하기 모드를 이용해 주세요!', '📱');
-        return;
-      }
-
       const btn = $('createRoomBtn');
       btn.disabled = true;
 
-      try {
-        const themeId = $('createThemeSelect').value;
-        const theme = STORY_THEMES.find((t) => t.id === themeId) || STORY_THEMES[0];
-        const code = generateRoomCode();
-        const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', code);
+      const themeId = $('createThemeSelect').value;
+      const theme = STORY_THEMES.find((t) => t.id === themeId) || STORY_THEMES[0];
+      const code = generateRoomCode();
 
-        const initialRoom = {
-          code,
-          status: 'waiting', // 'waiting' | 'writing' | 'finished'
-          leaderId: state.userId,
-          themeLabel: theme.label,
-          openingSentence: theme.opening,
-          targetTurns: state.createTurns,
-          currentTurnIndex: 0,
-          members: [
-            { id: state.userId, name, avatar: state.createAvatar, isLeader: true }
-          ],
-          sentences: [],
-          bookTitle: '',
-          bookMoral: '',
-          createdAt: Date.now()
-        };
+      const initialRoom = {
+        code,
+        status: 'waiting', // 'waiting' | 'writing' | 'finished'
+        leaderId: state.userId,
+        themeLabel: theme.label,
+        openingSentence: theme.opening,
+        targetTurns: state.createTurns,
+        currentTurnIndex: 0,
+        members: [
+          { id: state.userId, name, avatar: state.createAvatar, isLeader: true }
+        ],
+        sentences: [],
+        bookTitle: '',
+        bookMoral: '',
+        createdAt: Date.now()
+      };
 
-        await setDoc(roomRef, initialRoom);
-        state.mode = 'online';
-        state.roomCode = code;
-        subscribeToRoom(code);
-        showToast(`${code}번 방이 열렸어요! 친구들에게 코드를 알려주세요!`, '🎉');
-      } catch (err) {
-        showToast('방을 만드는 중 오류가 발생했어요.', '😥');
-      } finally {
+      // 1) Firebase 모드
+      if (state.transport === 'firebase' && state.firebaseReady) {
+        try {
+          const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', code);
+          await setDoc(roomRef, initialRoom);
+          state.mode = 'online';
+          state.roomCode = code;
+          subscribeToRoom(code);
+          showToast(`${code}번 방이 열렸어요! 친구들에게 코드를 알려주세요!`, '🎉');
+        } catch (err) {
+          showToast('방을 만드는 중 오류가 발생했어요.', '😥');
+        } finally {
+          btn.disabled = false;
+        }
+        return;
+      }
+
+      // 2) PeerJS 실시간 P2P 모드 (별도 서버 없이 기기 간 직접 연결)
+      if (typeof window.Peer === 'undefined') {
+        showToast('네트워크 연결을 확인해 주세요. 1대로 같이하기 모드를 사용할 수 있어요!', '📱');
         btn.disabled = false;
+        return;
+      }
+
+      cleanupP2P();
+      try {
+        const peer = new window.Peer(getPeerRoomId(code));
+        state.peer = peer;
+
+        peer.on('open', () => {
+          state.mode = 'online';
+          state.roomCode = code;
+          state.roomData = initialRoom;
+          btn.disabled = false;
+          renderCurrentRoomState();
+          showToast(`${code}번 방이 열렸어요! 조원들에게 코드를 알려주세요!`, '🎉');
+        });
+
+        peer.on('connection', (conn) => {
+          state.peerConns.push(conn);
+
+          conn.on('open', () => {
+            if (state.roomData) {
+              conn.send({ type: 'STATE', roomData: state.roomData });
+            }
+          });
+
+          conn.on('data', (msg) => {
+            if (!state.roomData || !msg || !msg.type) return;
+
+            if (msg.type === 'JOIN' && msg.member) {
+              if (state.roomData.status === 'finished') {
+                conn.send({ type: 'ERROR', message: '이미 동화가 완성된 방이에요!' });
+                return;
+              }
+              const exists = state.roomData.members.some((m) => m.id === msg.member.id);
+              if (!exists) {
+                state.roomData.members = [...state.roomData.members, msg.member];
+                showToast(`${msg.member.avatar} ${msg.member.name} 친구가 입장했어요!`, '🎒');
+              }
+              renderCurrentRoomState();
+              broadcastP2PState();
+            } else if (msg.type === 'SUBMIT_SENTENCE' && msg.text) {
+              const currentWriter = state.roomData.members[state.roomData.currentTurnIndex % state.roomData.members.length];
+              if (!currentWriter || currentWriter.id !== msg.authorId) return;
+
+              const newSentence = {
+                authorId: currentWriter.id,
+                authorName: currentWriter.name,
+                avatar: currentWriter.avatar,
+                text: msg.text,
+                createdAt: Date.now()
+              };
+              state.roomData.sentences = [...state.roomData.sentences, newSentence];
+              state.roomData.currentTurnIndex = (state.roomData.currentTurnIndex + 1) % state.roomData.members.length;
+              if (state.roomData.sentences.length >= state.roomData.targetTurns) {
+                state.roomData.status = 'finished';
+              }
+              renderCurrentRoomState();
+              broadcastP2PState();
+            }
+          });
+
+          conn.on('close', () => {
+            state.peerConns = state.peerConns.filter((c) => c !== conn);
+          });
+        });
+
+        peer.on('error', (err) => {
+          btn.disabled = false;
+          if (err.type === 'unavailable-id') {
+            showToast('방 코드가 겹쳤어요. 버튼을 한 번 더 눌러주세요!', '🔄');
+          } else {
+            showToast('실시간 방 연결 중 오류가 발생했어요. 다시 시도해 주세요.', '😥');
+          }
+        });
+      } catch (err) {
+        btn.disabled = false;
+        showToast('방을 만드는 중 오류가 발생했어요.', '😥');
       }
     }
 
@@ -1140,45 +1266,111 @@
         $('joinCodeInput').focus();
         return;
       }
-      if (!state.firebaseReady) {
-        showToast('실시간 서버에 연결되지 않아 방 입장이 불가능해요.', '😥');
-        return;
-      }
 
       const btn = $('joinRoomBtn');
       btn.disabled = true;
 
-      try {
-        const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', code);
-        const snap = await getDoc(roomRef);
+      // 1) Firebase 모드
+      if (state.transport === 'firebase' && state.firebaseReady) {
+        try {
+          const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', code);
+          const snap = await getDoc(roomRef);
 
-        if (!snap.exists()) {
-          showToast(`${code}번 방을 찾을 수 없어요. 코드를 다시 확인해 주세요!`, '🔍');
-          return;
-        }
-
-        const data = snap.data();
-        const alreadyIn = (data.members || []).some((m) => m.id === state.userId);
-        if (!alreadyIn) {
-          if (data.status === 'finished') {
-            showToast('이미 동화가 완성된 방이에요!', '📚');
+          if (!snap.exists()) {
+            showToast(`${code}번 방을 찾을 수 없어요. 코드를 다시 확인해 주세요!`, '🔍');
             return;
           }
-          const updatedMembers = [
-            ...(data.members || []),
-            { id: state.userId, name, avatar: state.joinAvatar, isLeader: false }
-          ];
-          await updateDoc(roomRef, { members: updatedMembers });
-        }
 
-        state.mode = 'online';
-        state.roomCode = code;
-        subscribeToRoom(code);
-        showToast(`${code}번 방에 들어왔어요!`, '🎒');
-      } catch (err) {
-        showToast('방에 들어가는 중 오류가 발생했어요.', '😥');
-      } finally {
+          const data = snap.data();
+          const alreadyIn = (data.members || []).some((m) => m.id === state.userId);
+          if (!alreadyIn) {
+            if (data.status === 'finished') {
+              showToast('이미 동화가 완성된 방이에요!', '📚');
+              return;
+            }
+            const updatedMembers = [
+              ...(data.members || []),
+              { id: state.userId, name, avatar: state.joinAvatar, isLeader: false }
+            ];
+            await updateDoc(roomRef, { members: updatedMembers });
+          }
+
+          state.mode = 'online';
+          state.roomCode = code;
+          subscribeToRoom(code);
+          showToast(`${code}번 방에 들어왔어요!`, '🎒');
+        } catch (err) {
+          showToast('방에 들어가는 중 오류가 발생했어요.', '😥');
+        } finally {
+          btn.disabled = false;
+        }
+        return;
+      }
+
+      // 2) PeerJS 실시간 P2P 모드
+      if (typeof window.Peer === 'undefined') {
+        showToast('네트워크 연결을 확인해 주세요.', '😥');
         btn.disabled = false;
+        return;
+      }
+
+      cleanupP2P();
+      let connected = false;
+      const timeoutId = setTimeout(() => {
+        if (!connected) {
+          cleanupP2P();
+          btn.disabled = false;
+          showToast(`${code}번 방을 찾을 수 없어요. 조장님이 방을 열었는지 확인해 주세요!`, '🔍');
+        }
+      }, 7000);
+
+      try {
+        const peer = new window.Peer();
+        state.peer = peer;
+
+        peer.on('open', () => {
+          const conn = peer.connect(getPeerRoomId(code), { reliable: true });
+          state.hostConn = conn;
+
+          conn.on('open', () => {
+            connected = true;
+            clearTimeout(timeoutId);
+            state.mode = 'online';
+            state.roomCode = code;
+            conn.send({
+              type: 'JOIN',
+              member: { id: state.userId, name, avatar: state.joinAvatar, isLeader: false }
+            });
+            btn.disabled = false;
+            showToast(`${code}번 방에 들어왔어요!`, '🎒');
+          });
+
+          conn.on('data', (msg) => {
+            if (!msg || !msg.type) return;
+            if (msg.type === 'STATE' && msg.roomData) {
+              state.roomData = msg.roomData;
+              renderCurrentRoomState();
+            } else if (msg.type === 'ERROR') {
+              showToast(msg.message || '방에 입장할 수 없어요.', '😥');
+              resetToLobby();
+            }
+          });
+
+          conn.on('close', () => {
+            showToast('조장님과의 연결이 종료되었어요.', '🚪');
+            resetToLobby();
+          });
+        });
+
+        peer.on('error', () => {
+          clearTimeout(timeoutId);
+          btn.disabled = false;
+          showToast(`${code}번 방을 찾을 수 없어요. 방 코드를 다시 확인해 주세요!`, '🔍');
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        btn.disabled = false;
+        showToast('방에 들어가는 중 오류가 발생했어요.', '😥');
       }
     }
 
@@ -1427,15 +1619,24 @@
     async function startMultiplayerGame() {
       if (!state.roomData || state.mode !== 'online') return;
       const openingText = $('waitingOpeningInput').value.trim() || state.roomData.openingSentence;
-      const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
-      try {
-        await updateDoc(roomRef, {
-          status: 'writing',
-          openingSentence: openingText,
-          currentTurnIndex: 0
-        });
-      } catch (err) {
-        showToast('시작하는 중 오류가 발생했어요.', '😥');
+
+      if (state.transport === 'firebase' && state.firebaseReady) {
+        const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
+        try {
+          await updateDoc(roomRef, {
+            status: 'writing',
+            openingSentence: openingText,
+            currentTurnIndex: 0
+          });
+        } catch (err) {
+          showToast('시작하는 중 오류가 발생했어요.', '😥');
+        }
+      } else if (state.transport === 'p2p') {
+        state.roomData.status = 'writing';
+        state.roomData.openingSentence = openingText;
+        state.roomData.currentTurnIndex = 0;
+        renderCurrentRoomState();
+        broadcastP2PState();
       }
     }
 
@@ -1473,7 +1674,7 @@
           state.roomData.status = 'finished';
         }
         renderCurrentRoomState();
-      } else {
+      } else if (state.transport === 'firebase' && state.firebaseReady) {
         const btn = $('submitSentenceBtn');
         btn.disabled = true;
         try {
@@ -1489,14 +1690,38 @@
         } finally {
           btn.disabled = false;
         }
+      } else if (state.transport === 'p2p') {
+        const isLeader = data.leaderId === state.userId;
+        if (isLeader) {
+          state.roomData.sentences = nextSentences;
+          state.roomData.currentTurnIndex = nextTurnIndex;
+          if (isFinished) state.roomData.status = 'finished';
+          renderCurrentRoomState();
+          broadcastP2PState();
+        } else if (state.hostConn && state.hostConn.open) {
+          state.hostConn.send({
+            type: 'SUBMIT_SENTENCE',
+            authorId: state.userId,
+            text
+          });
+        } else {
+          showToast('조장님과의 연결이 끊어졌어요.', '😥');
+          $('sentenceInput').value = text;
+        }
       }
     }
 
     async function skipCurrentTurn() {
       if (!state.roomData || state.mode !== 'online') return;
       const nextIndex = (state.roomData.currentTurnIndex + 1) % state.roomData.members.length;
-      const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
-      await updateDoc(roomRef, { currentTurnIndex: nextIndex }).catch(() => {});
+      if (state.transport === 'firebase' && state.firebaseReady) {
+        const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
+        await updateDoc(roomRef, { currentTurnIndex: nextIndex }).catch(() => {});
+      } else if (state.transport === 'p2p') {
+        state.roomData.currentTurnIndex = nextIndex;
+        renderCurrentRoomState();
+        broadcastP2PState();
+      }
       showToast('다음 친구 차례로 넘겼어요!', '⏭️');
     }
 
@@ -1505,9 +1730,13 @@
       if (state.mode === 'local') {
         state.roomData.status = 'finished';
         renderCurrentRoomState();
-      } else {
+      } else if (state.transport === 'firebase' && state.firebaseReady) {
         const roomRef = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'relay_rooms', state.roomCode);
         await updateDoc(roomRef, { status: 'finished' }).catch(() => {});
+      } else if (state.transport === 'p2p') {
+        state.roomData.status = 'finished';
+        renderCurrentRoomState();
+        broadcastP2PState();
       }
     }
 
@@ -1516,6 +1745,7 @@
         state.roomUnsubscribe();
         state.roomUnsubscribe = null;
       }
+      cleanupP2P();
       if (state.currentAudio) {
         state.currentAudio.pause();
         state.currentAudio = null;
