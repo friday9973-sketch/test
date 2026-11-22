@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>릴레이 동화 작가들 - 우리 반 이야기 만들기</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: 초등학생 친화적인 'Jua' 폰트와 깔끔한 'Noto Sans KR' -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Jua"', 'sans-serif'],
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                    },
+                    colors: {
+                        cream: '#FFFBF2',
+                        sunny: '#FFD166',
+                        coral: '#FF6B6B',
+                        mint: '#06D6A0',
+                        sky: '#118AB2',
+                        plum: '#8338EC',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 동화책 느낌의 부드러운 배경 패턴과 애니메이션 */
+        body {
+            background-color: #FFFBF2;
+            background-image: radial-gradient(#FDE68A 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #2D3748;
+            overflow-x: hidden;
+        }
+
+        .font-display {
+            font-family: 'Jua', sans-serif;
+        }
+
+        /* 쫀득한 클릭감의 3D 버튼 스타일 */
+        .btn-bounce {
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+        .btn-bounce:active:not(:disabled) {
+            transform: translateY(3px);
+        }
+
+        /* 새 문장 등장 애니메이션 */
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* 떠다니는 효과 */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        /* 인쇄 시 불필요한 UI 숨기기 */
+        @media print {
+            body {
+                background: white !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-book {
+                box-shadow: none !important;
+                border: 2px solid #E2E8F0 !important;
+            }
+        }
+
+        /* 스크롤바 꾸미기 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FEF3C7;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #F59E0B;
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 상단 헤더 -->
+    <header class="no-print sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-amber-200 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="confirmGoHome()">
+                <span class="text-3xl animate-float inline-block">📖</span>
+                <div>
+                    <h1 class="font-display text-xl sm:text-2xl text-amber-600 leading-tight">릴레이 동화 작가들</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">한 문장씩 이어 쓰는 우리만의 이야기</p>
+                </div>
+            </div>
+            <div id="header-actions" class="flex items-center gap-2">
+                <!-- 화면 상태에 따라 동적으로 버튼 렌더링 -->
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-6 sm:py-8">
+        <!-- 1. 준비 화면 (작가 등록 & 주제 선택) -->
+        <section id="screen-setup" class="space-y-6">
+            <!-- 환영 배너 -->
+            <div class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+                <div class="relative z-10">
+                    <span class="inline-block bg-white/25 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold mb-2">✨ 함께 만드는 상상 놀이터</span>
+                    <h2 class="font-display text-3xl sm:text-4xl mb-2">오늘은 어떤 이야기가 펼쳐질까요?</h2>
+                    <p class="text-white/95 text-sm sm:text-base max-w-xl">
+                        친구들과 차례대로 한 문장씩 적다 보면 세상에 하나뿐인 멋진 동화가 완성돼요! 먼저 참여할 꼬마 작가들을 등록해 주세요.
+                    </p>
+                </div>
+                <div class="absolute -right-4 -bottom-6 text-8xl opacity-20 select-none pointer-events-none">✏️</div>
+            </div>
+
+            <!-- Step 1: 꼬마 작가 등록 -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-display text-xl sm:text-2xl text-slate-800 flex items-center gap-2">
+                        <span class="bg-amber-100 text-amber-700 w-8 h-8 rounded-full flex items-center justify-center text-lg">1</span>
+                        참여할 작가들 등록하기
+                    </h3>
+                    <span id="player-count-badge" class="bg-sky-100 text-sky-700 font-bold text-sm px-3 py-1 rounded-full">0명 참여</span>
+                </div>
+
+                <!-- 아바타 선택 & 이름 입력 폼 -->
+                <div class="bg-amber-50/70 rounded-2xl p-4 mb-4 border border-amber-200/70">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">동물 친구를 고르고 이름을 적어주세요:</label>
+                    <div id="avatar-picker" class="flex flex-wrap gap-2 mb-3">
+                        <!-- JS로 아바타 버튼 생성 -->
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input
+                            type="text"
+                            id="player-name-input"
+                            maxlength="12"
+                            placeholder="예: 민수, 지아, 하늘이..."
+                            class="flex-1 px-4 py-3 rounded-2xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none text-base bg-white"
+                            onkeydown="if(event.key === 'Enter') addPlayer()"
+                        >
+                        <button
+                            type="button"
+                            onclick="addPlayer()"
+                            class="btn-bounce bg-amber-500 hover:bg-amber-600 text-white font-display text-lg px-6 py-3 rounded-2xl border-b-4 border-amber-700 shadow-sm whitespace-nowrap"
+                        >
+                            + 작가 추가
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 등록된 작가 목록 -->
+                <div id="player-list" class="flex flex-wrap gap-2.5 min-h-[56px] items-center">
+                    <!-- JS로 작가 칩 렌더링 -->
+                </div>
+            </div>
+
+            <!-- Step 2: 이야기의 첫 문장 선택 -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-100">
+                <h3 class="font-display text-xl sm:text-2xl text-slate-800 flex items-center gap-2 mb-4">
+                    <span class="bg-emerald-100 text-emerald-700 w-8 h-8 rounded-full flex items-center justify-center text-lg">2</span>
+                    이야기의 시작 문장 고르기
+                </h3>
+
+                <div id="starter-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <!-- JS로 시작 문장 카드 생성 -->
+                </div>
+
+                <!-- 직접 입력 영역 -->
+                <div id="custom-starter-box" class="hidden mt-3">
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">직접 첫 문장을 써보세요:</label>
+                    <input
+                        type="text"
+                        id="custom-starter-input"
+                        maxlength="100"
+                        placeholder="예: 비가 주룩주룩 내리던 날, 우산 속에서 작은 요정이 나타났어요."
+                        class="w-full px-4 py-3 rounded-2xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none text-base bg-emerald-50/40"
+                    >
+                </div>
+            </div>
+
+            <!-- Step 3: 몇 바퀴 돌까요? -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-100">
+                <h3 class="font-display text-xl sm:text-2xl text-slate-800 flex items-center gap-2 mb-4">
+                    <span class="bg-purple-100 text-purple-700 w-8 h-8 rounded-full flex items-center justify-center text-lg">3</span>
+                    몇 바퀴씩 돌아가며 쓸까요?
+                </h3>
+                <div id="rounds-selector" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- JS로 라운드 옵션 생성 -->
+                </div>
+            </div>
+
+            <!-- 시작 버튼 -->
+            <div class="pt-2 pb-6 text-center">
+                <button
+                    type="button"
+                    onclick="startStory()"
+                    class="btn-bounce w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-display text-2xl px-12 py-4 rounded-3xl border-b-4 border-emerald-700 shadow-lg"
+                >
+                    🚀 이야기 쓰기 시작!
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. 이야기 쓰기 화면 (릴레이 진행) -->
+        <section id="screen-play" class="hidden space-y-5">
+            <!-- 진행 상황 & 차례 표시 바 -->
+            <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-md border-2 border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5 w-full sm:w-auto">
+                    <div id="current-avatar" class="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-inner border-2 border-white shrink-0">
+                        🐶
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span id="round-badge" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">1바퀴째</span>
+                            <span id="sentence-count-badge" class="bg-slate-100 text-slate-600 text-xs font-bold px-2.5 py-0.5 rounded-full">총 1문장</span>
+                        </div>
+                        <h2 class="font-display text-2xl sm:text-3xl text-slate-800 mt-0.5">
+                            지금은 <span id="current-player-name" class="text-rose-500">민수</span> 작가님 차례!
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- 다음 차례 미리보기 -->
+                <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200 w-full sm:w-auto justify-center">
+                    <span class="text-xs font-bold text-slate-500">다음 차례:</span>
+                    <span id="next-player-preview" class="text-sm font-bold text-slate-700">🐱 지아</span>
+                </div>
+            </div>
+
+            <!-- 지금까지의 이야기 (동화책 뷰) -->
+            <div class="bg-white rounded-3xl shadow-md border-2 border-amber-100 overflow-hidden">
+                <div class="bg-amber-50 px-5 py-3 border-b border-amber-100 flex items-center justify-between">
+                    <span class="font-display text-lg text-amber-800 flex items-center gap-1.5">
+                        📚 지금까지 만들어진 이야기
+                    </span>
+                    <button
+                        type="button"
+                        id="btn-undo"
+                        onclick="undoLastSentence()"
+                        class="text-xs sm:text-sm font-bold text-slate-500 hover:text-rose-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 transition disabled:opacity-40"
+                    >
+                        ↩️ 방금 문장 지우기
+                    </button>
+                </div>
+
+                <div id="story-feed" class="p-5 space-y-3.5 max-h-[380px] overflow-y-auto bg-gradient-to-b from-white to-amber-50/30">
+                    <!-- JS로 문장 카드 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 상상력 도우미 (단어 주사위 + AI 힌트) -->
+            <div class="bg-indigo-50/80 rounded-3xl p-4 border-2 border-indigo-100">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span class="font-display text-base sm:text-lg text-indigo-800 flex items-center gap-1.5">
+                        💡 무슨 말을 쓸지 고민되나요?
+                    </span>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onclick="rollIdeaDice()"
+                            class="btn-bounce bg-white hover:bg-indigo-100 text-indigo-700 font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl border-2 border-indigo-200 shadow-sm"
+                        >
+                            🎲 단어 주사위 굴리기
+                        </button>
+                        <button
+                            type="button"
+                            id="btn-ai-hint"
+                            onclick="fetchAIHints()"
+                            class="btn-bounce bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl border-b-2 border-indigo-700 shadow-sm flex items-center gap-1"
+                        >
+                            ✨ AI 문장 힌트 받기
+                        </button>
+                    </div>
+                </div>
+                <!-- 단어 주사위 또는 AI 힌트 출력 영역 -->
+                <div id="idea-box" class="text-sm text-indigo-900 bg-white/80 rounded-2xl p-3 border border-indigo-100 hidden">
+                    <!-- 동적 내용 -->
+                </div>
+            </div>
+
+            <!-- 문장 입력 영역 -->
+            <div class="bg-white rounded-3xl p-5 shadow-lg border-2 border-rose-200">
+                <label for="sentence-input" class="block font-display text-lg text-slate-700 mb-2">
+                    ✍️ 이어질 한 문장을 적어주세요!
+                </label>
+                <div class="relative">
+                    <textarea
+                        id="sentence-input"
+                        rows="2"
+                        maxlength="120"
+                        placeholder="앞 문장에 이어서 재미있는 상상을 한 문장으로 적어보세요!"
+                        class="w-full p-4 rounded-2xl border-2 border-slate-200 focus:border-rose-400 focus:outline-none text-base sm:text-lg resize-none bg-slate-50/50 focus:bg-white transition"
+                        oninput="updateCharCount()"
+                        onkeydown="handleSentenceKeydown(event)"
+                    ></textarea>
+                    <span id="char-count" class="absolute bottom-3 right-4 text-xs text-slate-400 font-bold">0 / 120</span>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onclick="openConfirmModal('이야기를 지금 마무리하고 완성된 동화책을 볼까요?', finishStory)"
+                        class="w-full sm:w-auto text-sm font-bold text-slate-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-5 py-3 rounded-2xl border border-amber-200 transition"
+                    >
+                        🏁 여기서 이야기 끝내기
+                    </button>
+                    <button
+                        type="button"
+                        onclick="submitSentence()"
+                        class="btn-bounce w-full sm:w-auto bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-display text-xl px-8 py-3.5 rounded-2xl border-b-4 border-rose-700 shadow-md"
+                    >
+                        문장 붙이기! ✨
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 완성된 동화책 화면 -->
+        <section id="screen-finish" class="hidden space-y-6">
+            <!-- 축하 배너 -->
+            <div class="no-print text-center py-2">
+                <span class="inline-block bg-amber-100 text-amber-800 font-bold px-4 py-1.5 rounded-full text-sm mb-2">🎉 대단해요! 멋진 동화가 완성되었어요!</span>
+                <h2 class="font-display text-3xl sm:text-4xl text-slate-800">우리 반 릴레이 동화책</h2>
+            </div>
+
+            <!-- AI 마법 도구 모음 -->
+            <div class="no-print bg-white rounded-3xl p-4 sm:p-5 shadow-md border-2 border-purple-100 flex flex-wrap items-center justify-center gap-3">
+                <button
+                    type="button"
+                    id="btn-ai-title"
+                    onclick="generateTitleAndPraise()"
+                    class="btn-bounce bg-purple-500 hover:bg-purple-600 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-2xl border-b-4 border-purple-700 flex items-center gap-1.5"
+                >
+                    🏷️ AI 제목 & 칭찬 받기
+                </button>
+                <button
+                    type="button"
+                    id="btn-ai-cover"
+                    onclick="generateCoverImage()"
+                    class="btn-bounce bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-2xl border-b-4 border-sky-700 flex items-center gap-1.5"
+                >
+                    🎨 AI 동화 표지 그리기
+                </button>
+                <button
+                    type="button"
+                    id="btn-ai-tts"
+                    onclick="readStoryAloud()"
+                    class="btn-bounce bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm sm:text-base px-4 py-2.5 rounded-2xl border-b-4 border-emerald-700 flex items-center gap-1.5"
+                >
+                    🔊 동화 읽어주기
+                </button>
+            </div>
+
+            <!-- 오디오 플레이어 영역 (동화 읽어주기 생성 시 표시) -->
+            <div id="audio-player-box" class="no-print hidden bg-emerald-50 rounded-3xl p-4 border-2 border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-pop">
+                <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm sm:text-base">
+                    <span class="text-2xl">🎧</span>
+                    <span>동화 구연이 준비되었어요! 다 같이 들어볼까요?</span>
+                </div>
+                <audio id="story-audio" controls class="w-full sm:w-auto h-10"></audio>
+            </div>
+
+            <!-- 실제 동화책 카드 -->
+            <article class="print-book bg-white rounded-[2rem] p-6 sm:p-10 shadow-xl border-4 border-amber-200 relative overflow-hidden">
+                <!-- 제목 편집 가능 -->
+                <div class="text-center mb-6 pb-6 border-b-2 border-dashed border-amber-200">
+                    <p class="text-xs font-bold text-amber-500 tracking-widest uppercase mb-2">OUR RELAY STORYBOOK</p>
+                    <input
+                        type="text"
+                        id="book-title-input"
+                        value="우리들의 신나는 모험"
+                        class="font-display text-3xl sm:text-4xl text-center text-slate-800 w-full bg-transparent hover:bg-amber-50 focus:bg-amber-50 rounded-xl px-2 py-1 focus:outline-none transition"
+                        title="클릭해서 동화 제목을 바꿀 수 있어요"
+                    >
+                    <div id="book-authors" class="mt-3 flex flex-wrap justify-center gap-2">
+                        <!-- 참여 작가 뱃지 -->
+                    </div>
+                </div>
+
+                <!-- AI 표지 그림 표시 영역 -->
+                <div id="cover-image-container" class="hidden mb-8 flex flex-col items-center">
+                    <div id="cover-loading" class="hidden w-full max-w-md aspect-square rounded-3xl bg-sky-50 border-2 border-dashed border-sky-200 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p class="font-display text-xl text-sky-700">AI 화가가 동화 그림을 그리고 있어요...</p>
+                        <p class="text-xs text-sky-500 mt-1">잠시만 기다려 주세요!</p>
+                    </div>
+                    <img id="cover-image" src="" alt="완성된 동화 표지 그림" class="hidden w-full max-w-md rounded-3xl shadow-lg border-4 border-amber-100 object-cover animate-pop">
+                </div>
+
+                <!-- 이야기 본문 (책처럼 읽기 편하게) -->
+                <div id="book-content" class="space-y-4 text-lg sm:text-xl leading-relaxed text-slate-700">
+                    <!-- JS로 본문 렌더링 -->
+                </div>
+
+                <!-- AI 선생님 칭찬 카드 -->
+                <div id="ai-praise-box" class="hidden mt-8 bg-purple-50 rounded-2xl p-5 border-2 border-purple-200 animate-pop">
+                    <div class="flex items-start gap-3">
+                        <span class="text-3xl">🌟</span>
+                        <div>
+                            <h4 class="font-display text-lg text-purple-800 mb-1">AI 선생님의 칭찬 한마디</h4>
+                            <p id="ai-praise-text" class="text-sm sm:text-base text-purple-900 leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 하단 공유/저장/다시하기 버튼 -->
+            <div class="no-print flex flex-wrap items-center justify-center gap-3 pb-8">
+                <button
+                    type="button"
+                    onclick="copyStoryText()"
+                    class="btn-bounce bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-3 rounded-2xl border-2 border-slate-200 shadow-sm"
+                >
+                    📋 이야기 글 복사하기
+                </button>
+                <button
+                    type="button"
+                    onclick="window.print()"
+                    class="btn-bounce bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-3 rounded-2xl border-2 border-slate-200 shadow-sm"
+                >
+                    🖨️ 동화책 인쇄하기
+                </button>
+                <button
+                    type="button"
+                    onclick="openConfirmModal('같은 친구들과 새로운 이야기를 시작할까요?', restartWithSamePlayers)"
+                    class="btn-bounce bg-amber-500 hover:bg-amber-600 text-white font-display text-lg px-6 py-3 rounded-2xl border-b-4 border-amber-700 shadow-sm"
+                >
+                    🔄 새 이야기 쓰기
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 토스트 알림 (alert 대체) -->
+    <div id="toast-container" class="no-print fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col gap-2 w-[90%] max-w-md items-center"></div>
+
+    <!-- 커스텀 확인 모달 (confirm 대체) -->
+    <div id="confirm-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-2 border-amber-200 animate-pop text-center">
+            <div class="text-4xl mb-3">🤔</div>
+            <p id="confirm-modal-message" class="font-display text-xl text-slate-800 mb-6 leading-snug"></p>
+            <div class="flex gap-3">
+                <button
+                    type="button"
+                    onclick="closeConfirmModal()"
+                    class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition"
+                >
+                    취소
+                </button>
+                <button
+                    type="button"
+                    id="confirm-modal-ok"
+                    class="btn-bounce flex-1 bg-amber-500 hover:bg-amber-600 text-white font-display text-lg py-3 rounded-2xl border-b-4 border-amber-700"
+                >
+                    좋아요!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 축하 색종이 캔버스 -->
+    <canvas id="confetti-canvas" class="no-print fixed inset-0 pointer-events-none z-40 hidden"></canvas>
+
+    <script>
+        /* =========================================================
+           1. 상수 및 기본 데이터 설정
+        ========================================================= */
+        const apiKey = ""; // Canvas 런타임에서 자동으로 API 키가 제공됩니다.
+
+        // 아이들이 좋아할 동물 아바타 목록
+        const AVATARS = ['🐶', '🐱', '🐰', '🐻', '🦊', '🐼', '🐸', '🦁', '🐧', '🦄', '🦖', '🐝'];
+
+        // 작가별 고유 파스텔 색상 팔레트
+        const PLAYER_COLORS = [
+            { bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200', badge: 'bg-rose-500' },
+            { bg: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-200', badge: 'bg-sky-500' },
+            { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'bg-emerald-500' },
+            { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200', badge: 'bg-amber-500' },
+            { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200', badge: 'bg-purple-500' },
+            { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-200', badge: 'bg-pink-500' },
+            { bg: 'bg-teal-100', text: 'text-teal-700', border: 'border-teal-200', badge: 'bg-teal-500' },
+            { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200', badge: 'bg-indigo-500' }
+        ];
+
+        // 이야기 시작 문장 프리셋
+        const STARTER_PRESETS = [
+            {
+                id: 'egg',
+                icon: '🥚',
+                label: '신비한 알',
+                text: '어느 날 아침, 학교 운동장 한가운데에 반짝이는 커다란 알이 떨어져 있었어요.'
+            },
+            {
+                id: 'dog',
+                icon: '🐕',
+                label: '말하는 강아지',
+                text: '방과 후 집에 돌아왔더니 우리 집 강아지가 갑자기 나에게 비밀 이야기를 걸어왔어요.'
+            },
+            {
+                id: 'door',
+                icon: '🚪',
+                label: '도서관 비밀 문',
+                text: '도서관 맨 끝 책장 뒤에서 무지개빛이 새어 나오는 작은 비밀 문을 발견했어요.'
+            },
+            {
+                id: 'jelly',
+                icon: '🚀',
+                label: '젤리 행성 모험',
+                text: '종이 우주선을 타고 날아가다 말랑말랑한 딸기 젤리로 만들어진 행성에 도착했어요.'
+            },
+            {
+                id: 'custom',
+                icon: '✏️',
+                label: '직접 첫 문장 쓰기',
+                text: ''
+            }
+        ];
+
+        // 라운드(바퀴) 옵션
+        const ROUND_OPTIONS = [
+            { value: 2, label: '2바퀴', desc: '짧고 빠르게!' },
+            { value: 3, label: '3바퀴', desc: '딱 좋은 길이' },
+            { value: 4, label: '4바퀴', desc: '풍성한 동화' },
+            { value: 0, label: '자유롭게', desc: '끝날 때까지!' }
+        ];
+
+        // 상상력 단어 주사위 목록
+        const IDEA_WORDS = [
+            '🪄 마법 지팡이', '🌈 무지개 미끄럼틀', '👣 수상한 발자국', '🗝️ 황금 열쇠',
+            '☁️ 거대한 솜사탕', '⏰ 시간 여행 시계', '🐉 아기 용', '🎒 날아다니는 책가방',
+            '🍪 웃고 있는 쿠키', '🗺️ 보물 지도', '🎩 투명 망토', '🤖 수다쟁이 로봇',
+            '🌊 거품 파도', '🎵 노래하는 나무', '🦋 반짝이 나비', '🏰 구름 위 성'
+        ];
+
+        /* =========================================================
+           2. 애플리케이션 상태 관리
+        ========================================================= */
+        let state = {
+            screen: 'setup', // 'setup' | 'play' | 'finish'
+            selectedAvatar: AVATARS[0],
+            players: [
+                // 처음 접속했을 때 바로 체험해볼 수 있도록 기본 예시 2명 제공 (삭제/추가 자유)
+                { id: 1, name: '민수', avatar: '🐶', colorIdx: 0 },
+                { id: 2, name: '지아', avatar: '🐱', colorIdx: 1 }
+            ],
+            selectedStarterId: 'egg',
+            maxRounds: 3,
+            currentTurnIndex: 0,
+            currentRound: 1,
+            story: [], // { id, authorName, authorAvatar, colorIdx, text, isStarter }
+            bookTitle: '우리들의 신나는 모험',
+            aiPraise: '',
+            aiCoverUrl: '',
+            audioUrl: ''
+        };
+
+        let confirmCallback = null;
+
+        /* =========================================================
+           3. 초기화 및 렌더링
+        ========================================================= */
+        window.onload = function () {
+            loadFromLocalStorage();
+            renderAvatarPicker();
+            renderPlayerList();
+            renderStarterGrid();
+            renderRoundsSelector();
+            switchScreen(state.screen);
+        };
+
+        // 로컬 스토리지에 진행 상황 자동 저장 (새로고침 보호)
+        function saveToLocalStorage() {
+            try {
+                const toSave = {
+                    screen: state.screen,
+                    players: state.players,
+                    selectedStarterId: state.selectedStarterId,
+                    maxRounds: state.maxRounds,
+                    currentTurnIndex: state.currentTurnIndex,
+                    currentRound: state.currentRound,
+                    story: state.story,
+                    bookTitle: state.bookTitle,
+                    aiPraise: state.aiPraise
+                };
+                localStorage.setItem('relayStoryApp_v1', JSON.stringify(toSave));
+            } catch (e) {
+                // 용량 초과 등 무시
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('relayStoryApp_v1');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && Array.isArray(parsed.players)) {
+                        state = { ...state, ...parsed };
+                    }
+                }
+            } catch (e) {
+                // 파싱 실패 시 기본값 유지
+            }
+        }
+
+        // 화면 전환
+        function switchScreen(screenName) {
+            state.screen = screenName;
+            document.getElementById('screen-setup').classList.add('hidden');
+            document.getElementById('screen-play').classList.add('hidden');
+            document.getElementById('screen-finish').classList.add('hidden');
+
+            document.getElementById(`screen-${screenName}`).classList.remove('hidden');
+            renderHeaderActions();
+
+            if (screenName === 'play') {
+                renderPlayScreen();
+            } else if (screenName === 'finish') {
+                renderFinishScreen();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            saveToLocalStorage();
+        }
+
+        function renderHeaderActions() {
+            const container = document.getElementById('header-actions');
+            if (state.screen === 'setup') {
+                container.innerHTML = `<span class="text-xs sm:text-sm font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">✨ 준비 중</span>`;
+            } else if (state.screen === 'play') {
+                container.innerHTML = `
+                    <button onclick="confirmGoHome()" class="text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 px-3 py-1.5 rounded-xl transition">
+                        🏠 처음으로
+                    </button>
+                `;
+            } else {
+                container.innerHTML = `
+                    <button onclick="confirmGoHome()" class="text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 px-3 py-1.5 rounded-xl transition">
+                        🏠 처음으로
+                    </button>
+                `;
+            }
+        }
+
+        /* =========================================================
+           4. 준비 화면 (Setup) 로직
+        ========================================================= */
+        function renderAvatarPicker() {
+            const container = document.getElementById('avatar-picker');
+            container.innerHTML = AVATARS.map(av => {
+                const isSelected = state.selectedAvatar === av;
+                return `
+                    <button
+                        type="button"
+                        onclick="selectAvatar('${av}')"
+                        class="w-11 h-11 rounded-2xl text-2xl flex items-center justify-center transition ${
+                            isSelected
+                                ? 'bg-amber-400 scale-110 shadow-md ring-2 ring-amber-600'
+                                : 'bg-white hover:bg-amber-100 border border-amber-200'
+                        }"
+                        aria-label="아바타 ${av}"
+                    >${av}</button>
+                `;
+            }).join('');
+        }
+
+        function selectAvatar(av) {
+            state.selectedAvatar = av;
+            renderAvatarPicker();
+        }
+
+        function addPlayer() {
+            const input = document.getElementById('player-name-input');
+            const name = input.value.trim();
+
+            if (!name) {
+                showToast('작가 친구의 이름을 적어주세요! 😊', 'warn');
+                input.focus();
+                return;
+            }
+            if (state.players.length >= 12) {
+                showToast('작가는 최대 12명까지 참여할 수 있어요!', 'warn');
+                return;
+            }
+
+            const newPlayer = {
+                id: Date.now(),
+                name: name,
+                avatar: state.selectedAvatar,
+                colorIdx: state.players.length % PLAYER_COLORS.length
+            };
+
+            state.players.push(newPlayer);
+            input.value = '';
+
+            // 다음 친구를 위해 자동으로 다음 아바타 선택
+            const nextIdx = (AVATARS.indexOf(state.selectedAvatar) + 1) % AVATARS.length;
+            state.selectedAvatar = AVATARS[nextIdx];
+
+            renderAvatarPicker();
+            renderPlayerList();
+            saveToLocalStorage();
+            showToast(`${newPlayer.avatar} ${newPlayer.name} 작가님이 합류했어요!`, 'success');
+        }
+
+        function removePlayer(id) {
+            state.players = state.players.filter(p => p.id !== id);
+            renderPlayerList();
+            saveToLocalStorage();
+        }
+
+        function renderPlayerList() {
+            const container = document.getElementById('player-list');
+            const badge = document.getElementById('player-count-badge');
+            badge.textContent = `${state.players.length}명 참여`;
+
+            if (state.players.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 py-2">아직 등록된 작가가 없어요. 위에서 친구들을 추가해 주세요!</p>`;
+                return;
+            }
+
+            container.innerHTML = state.players.map((p, idx) => {
+                const c = PLAYER_COLORS[p.colorIdx % PLAYER_COLORS.length];
+                return `
+                    <div class="animate-pop inline-flex items-center gap-2 ${c.bg} ${c.text} border ${c.border} px-3.5 py-2 rounded-2xl font-bold text-sm sm:text-base shadow-sm">
+                        <span class="text-xs opacity-60">${idx + 1}.</span>
+                        <span class="text-xl">${p.avatar}</span>
+                        <span>${escapeHtml(p.name)}</span>
+                        <button
+                            type="button"
+                            onclick="removePlayer(${p.id})"
+                            class="ml-1 w-5 h-5 rounded-full bg-white/70 hover:bg-white text-xs flex items-center justify-center transition"
+                            aria-label="${escapeHtml(p.name)} 삭제"
+                        >✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStarterGrid() {
+            const container = document.getElementById('starter-grid');
+            container.innerHTML = STARTER_PRESETS.map(preset => {
+                const isSelected = state.selectedStarterId === preset.id;
+                return `
+                    <button
+                        type="button"
+                        onclick="selectStarter('${preset.id}')"
+                        class="text-left p-4 rounded-2xl border-2 transition ${
+                            isSelected
+                                ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-200'
+                                : 'bg-slate-50/70 border-slate-200 hover:border-emerald-300 hover:bg-white'
+                        }"
+                    >
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">${preset.icon}</span>
+                            <span class="font-display text-lg text-slate-800">${preset.label}</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-600 leading-snug">
+                            ${preset.text || '우리가 원하는 첫 문장으로 자유롭게 시작해요!'}
+                        </p>
+                    </button>
+                `;
+            }).join('');
+
+            const customBox = document.getElementById('custom-starter-box');
+            if (state.selectedStarterId === 'custom') {
+                customBox.classList.remove('hidden');
+            } else {
+                customBox.classList.add('hidden');
+            }
+        }
+
+        function selectStarter(id) {
+            state.selectedStarterId = id;
+            renderStarterGrid();
+            if (id === 'custom') {
+                document.getElementById('custom-starter-input').focus();
+            }
+        }
+
+        function renderRoundsSelector() {
+            const container = document.getElementById('rounds-selector');
+            container.innerHTML = ROUND_OPTIONS.map(opt => {
+                const isSelected = state.maxRounds === opt.value;
+                return `
+                    <button
+                        type="button"
+                        onclick="selectRounds(${opt.value})"
+                        class="p-3.5 rounded-2xl border-2 text-center transition ${
+                            isSelected
+                                ? 'bg-purple-50 border-purple-500 shadow-sm ring-2 ring-purple-200'
+                                : 'bg-slate-50/70 border-slate-200 hover:border-purple-300'
+                        }"
+                    >
+                        <div class="font-display text-xl text-purple-700">${opt.label}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${opt.desc}</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectRounds(val) {
+            state.maxRounds = val;
+            renderRoundsSelector();
+        }
+
+        function startStory() {
+            if (state.players.length < 2) {
+                showToast('최소 2명 이상의 작가를 등록해 주세요! 👫', 'warn');
+                return;
+            }
+
+            let starterText = '';
+            if (state.selectedStarterId === 'custom') {
+                starterText = document.getElementById('custom-starter-input').value.trim();
+                if (!starterText) {
+                    showToast('직접 쓸 첫 문장을 입력해 주세요! ✏️', 'warn');
+                    document.getElementById('custom-starter-input').focus();
+                    return;
+                }
+            } else {
+                const found = STARTER_PRESETS.find(p => p.id === state.selectedStarterId);
+                starterText = found ? found.text : STARTER_PRESETS[0].text;
+            }
+
+            // 게임 상태 초기화
+            state.story = [{
+                id: Date.now(),
+                authorName: '이야기 요정',
+                authorAvatar: '🧚',
+                colorIdx: 3,
+                text: starterText,
+                isStarter: true
+            }];
+            state.currentTurnIndex = 0;
+            state.currentRound = 1;
+            state.bookTitle = '우리들의 신나는 모험';
+            state.aiPraise = '';
+            state.aiCoverUrl = '';
+            state.audioUrl = '';
+
+            // 힌트 박스 숨기기
+            const ideaBox = document.getElementById('idea-box');
+            ideaBox.classList.add('hidden');
+            ideaBox.innerHTML = '';
+
+            switchScreen('play');
+            showToast('이야기가 시작되었어요! 첫 번째 작가님 화이팅! ✨', 'success');
+        }
+
+        /* =========================================================
+           5. 이야기 쓰기 화면 (Play) 로직
+        ========================================================= */
+        function renderPlayScreen() {
+            const currentPlayer = state.players[state.currentTurnIndex];
+            const nextPlayer = state.players[(state.currentTurnIndex + 1) % state.players.length];
+            const c = PLAYER_COLORS[currentPlayer.colorIdx % PLAYER_COLORS.length];
+
+            // 현재 차례 표시
+            const avatarEl = document.getElementById('current-avatar');
+            avatarEl.textContent = currentPlayer.avatar;
+            avatarEl.className = `w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-inner border-2 border-white shrink-0 ${c.bg}`;
+
+            document.getElementById('current-player-name').textContent = currentPlayer.name;
+            document.getElementById('next-player-preview').textContent = `${nextPlayer.avatar} ${nextPlayer.name}`;
+
+            const roundText = state.maxRounds > 0
+                ? `${state.currentRound} / ${state.maxRounds}바퀴째`
+                : `${state.currentRound}바퀴째 (자유 모드)`;
+            document.getElementById('round-badge').textContent = roundText;
+            document.getElementById('sentence-count-badge').textContent = `총 ${state.story.length}문장`;
+
+            // Undo 버튼 활성화 여부 (시작 문장만 있을 때는 비활성화)
+            document.getElementById('btn-undo').disabled = state.story.length <= 1;
+
+            // 이야기 피드 렌더링
+            const feed = document.getElementById('story-feed');
+            feed.innerHTML = state.story.map((item, idx) => {
+                const color = PLAYER_COLORS[item.colorIdx % PLAYER_COLORS.length];
+                if (item.isStarter) {
+                    return `
+                        <div class="animate-pop bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                            <span class="text-2xl shrink-0 mt-0.5">${item.authorAvatar}</span>
+                            <div>
+                                <span class="inline-block text-xs font-bold text-amber-700 bg-amber-200/70 px-2 py-0.5 rounded-full mb-1">시작 문장</span>
+                                <p class="text-slate-800 font-medium text-base sm:text-lg leading-relaxed">${escapeHtml(item.text)}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="animate-pop bg-white border-2 ${color.border} rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+                        <div class="w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center text-2xl shrink-0">
+                            ${item.authorAvatar}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-sm ${color.text}">${escapeHtml(item.authorName)} 작가</span>
+                                <span class="text-xs text-slate-400">#${idx}</span>
+                            </div>
+                            <p class="text-slate-800 text-base sm:text-lg leading-relaxed break-words">${escapeHtml(item.text)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 스크롤을 맨 아래(최신 문장)로 부드럽게 이동
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function updateCharCount() {
+            const input = document.getElementById('sentence-input');
+            document.getElementById('char-count').textContent = `${input.value.length} / 120`;
+        }
+
+        function handleSentenceKeydown(e) {
+            // Enter로 제출 (Shift+Enter는 줄바꿈 방지용으로 그냥 제출 처리)
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitSentence();
+            }
+        }
+
+        function submitSentence() {
+            const input = document.getElementById('sentence-input');
+            const text = input.value.trim();
+
+            if (!text) {
+                showToast('이어질 한 문장을 먼저 적어주세요! ✍️', 'warn');
+                input.focus();
+                return;
+            }
+
+            const currentPlayer = state.players[state.currentTurnIndex];
+
+            // 문장 추가
+            state.story.push({
+                id: Date.now(),
+                authorName: currentPlayer.name,
+                authorAvatar: currentPlayer.avatar,
+                colorIdx: currentPlayer.colorIdx,
+                text: text,
+                isStarter: false
+            });
+
+            input.value = '';
+            updateCharCount();
+
+            // 힌트 박스 닫기
+            const ideaBox = document.getElementById('idea-box');
+            ideaBox.classList.add('hidden');
+            ideaBox.innerHTML = '';
+
+            // 다음 차례 계산
+            const nextIndex = state.currentTurnIndex + 1;
+            if (nextIndex >= state.players.length) {
+                state.currentTurnIndex = 0;
+                state.currentRound += 1;
+            } else {
+                state.currentTurnIndex = nextIndex;
+            }
+
+            // 정해진 바퀴 수를 모두 마쳤는지 확인
+            if (state.maxRounds > 0 && state.currentRound > state.maxRounds) {
+                finishStory();
+                return;
+            }
+
+            renderPlayScreen();
+            saveToLocalStorage();
+            input.focus();
+        }
+
+        function undoLastSentence() {
+            if (state.story.length <= 1) return;
+
+            state.story.pop();
+
+            // 이전 차례로 되돌리기
+            if (state.currentTurnIndex === 0) {
+                state.currentTurnIndex = state.players.length - 1;
+                state.currentRound = Math.max(1, state.currentRound - 1);
+            } else {
+                state.currentTurnIndex -= 1;
+            }
+
+            renderPlayScreen();
+            saveToLocalStorage();
+            showToast('방금 쓴 문장을 지우고 차례를 되돌렸어요.', 'info');
+        }
+
+        // 상상력 단어 주사위 (오프라인 즉시 동작)
+        function rollIdeaDice() {
+            const shuffled = [...IDEA_WORDS].sort(() => 0.5 - Math.random());
+            const picks = shuffled.slice(0, 3);
+
+            const ideaBox = document.getElementById('idea-box');
+            ideaBox.classList.remove('hidden');
+            ideaBox.innerHTML = `
+                <div class="flex flex-wrap items-center gap-2 animate-pop">
+                    <span class="font-bold text-indigo-700">🎲 이 단어를 넣어보면 어떨까요?</span>
+                    ${picks.map(word => `
+                        <button
+                            type="button"
+                            onclick="insertWordToInput('${word.replace(/^[^\s]+\s/, '')}')"
+                            class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-3 py-1 rounded-full text-xs sm:text-sm transition"
+                            title="클릭하면 입력창에 들어가요"
+                        >${word}</button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function insertWordToInput(word) {
+            const input = document.getElementById('sentence-input');
+            const prefix = input.value && !input.value.endsWith(' ') ? ' ' : '';
+            input.value = (input.value + prefix + word).slice(0, 120);
+            updateCharCount();
+            input.focus();
+        }
+
+        /* =========================================================
+           6. 완성 화면 (Finish) 로직
+        ========================================================= */
+        function finishStory() {
+            switchScreen('finish');
+            launchConfetti();
+        }
+
+        function renderFinishScreen() {
+            // 제목 입력창 동기화
+            const titleInput = document.getElementById('book-title-input');
+            titleInput.value = state.bookTitle;
+            titleInput.oninput = (e) => {
+                state.bookTitle = e.target.value;
+                saveToLocalStorage();
+            };
+
+            // 참여 작가 뱃지
+            const authorsEl = document.getElementById('book-authors');
+            authorsEl.innerHTML = state.players.map(p => {
+                const c = PLAYER_COLORS[p.colorIdx % PLAYER_COLORS.length];
+                return `<span class="inline-flex items-center gap-1 ${c.bg} ${c.text} px-3 py-1 rounded-full text-xs sm:text-sm font-bold">${p.avatar} ${escapeHtml(p.name)}</span>`;
+            }).join('');
+
+            // 본문 렌더링 (누가 썼는지 귀여운 작은 태그와 함께 자연스럽게 읽히도록)
+            const contentEl = document.getElementById('book-content');
+            contentEl.innerHTML = state.story.map(item => {
+                const c = PLAYER_COLORS[item.colorIdx % PLAYER_COLORS.length];
+                if (item.isStarter) {
+                    return `
+                        <p class="bg-amber-50/70 p-4 rounded-2xl border-l-4 border-amber-400 font-medium text-slate-800">
+                            ${escapeHtml(item.text)}
+                        </p>
+                    `;
+                }
+                return `
+                    <p class="leading-relaxed">
+                        <span class="inline-flex items-center gap-1 align-middle mr-1.5 px-2 py-0.5 rounded-lg text-xs font-bold ${c.bg} ${c.text}">
+                            ${item.authorAvatar} ${escapeHtml(item.authorName)}
+                        </span>
+                        <span>${escapeHtml(item.text)}</span>
+                    </p>
+                `;
+            }).join('');
+
+            // 저장된 AI 칭찬이 있으면 표시
+            if (state.aiPraise) {
+                document.getElementById('ai-praise-box').classList.remove('hidden');
+                document.getElementById('ai-praise-text').textContent = state.aiPraise;
+            } else {
+                document.getElementById('ai-praise-box').classList.add('hidden');
+            }
+
+            // 저장된 AI 표지가 있으면 표시
+            if (state.aiCoverUrl) {
+                document.getElementById('cover-image-container').classList.remove('hidden');
+                document.getElementById('cover-loading').classList.add('hidden');
+                const img = document.getElementById('cover-image');
+                img.src = state.aiCoverUrl;
+                img.classList.remove('hidden');
+            } else {
+                document.getElementById('cover-image-container').classList.add('hidden');
+            }
+
+            // 저장된 오디오가 있으면 표시
+            if (state.audioUrl) {
+                document.getElementById('audio-player-box').classList.remove('hidden');
+                document.getElementById('story-audio').src = state.audioUrl;
+            } else {
+                document.getElementById('audio-player-box').classList.add('hidden');
+            }
+        }
+
+        // 이야기 글 복사 (iframe 환경 호환을 위해 document.execCommand 사용)
+        function copyStoryText() {
+            const title = document.getElementById('book-title-input').value || '우리들의 릴레이 동화';
+            const authors = state.players.map(p => `${p.avatar}${p.name}`).join(', ');
+            const body = state.story.map(s => s.text).join('\n');
+            const fullText = `📖 [${title}]\n✍️ 지은이: ${authors}\n\n${body}`;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = fullText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('동화 내용이 클립보드에 복사되었어요! 📋', 'success');
+            } catch (err) {
+                showToast('복사에 실패했어요. 직접 드래그해서 복사해 주세요.', 'warn');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function restartWithSamePlayers() {
+            state.story = [];
+            state.currentTurnIndex = 0;
+            state.currentRound = 1;
+            state.aiPraise = '';
+            state.aiCoverUrl = '';
+            state.audioUrl = '';
+            switchScreen('setup');
+        }
+
+        function confirmGoHome() {
+            if (state.screen === 'setup') return;
+            openConfirmModal('처음 준비 화면으로 돌아갈까요?', () => {
+                switchScreen('setup');
+            });
+        }
+
+        /* =========================================================
+           7. Gemini API 연동 (힌트, 제목/칭찬, 표지 그림, 동화 구연)
+        ========================================================= */
+        // 지수 백오프를 포함한 안전한 fetch 함수
+        async function fetchWithRetry(url, options, maxRetries = 4) {
+            let delay = 1000;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    if (response.status !== 429 && response.status < 500) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (err) {
+                    if (attempt === maxRetries - 1) throw err;
+                }
+                await new Promise(res => setTimeout(res, delay));
+                delay *= 2;
+            }
+            throw new Error('요청에 실패했습니다.');
+        }
+
+        // 7-1. AI 문장 힌트 받기 (gemini-3-flash-preview + Structured JSON)
+        async function fetchAIHints() {
+            const btn = document.getElementById('btn-ai-hint');
+            const ideaBox = document.getElementById('idea-box');
+            const storyText = state.story.map(s => s.text).join(' ');
+
+            btn.disabled = true;
+            btn.textContent = '✨ 생각하는 중...';
+            ideaBox.classList.remove('hidden');
+            ideaBox.innerHTML = `<p class="text-indigo-600 font-bold animate-pulse">🤖 AI 요정이 재미있는 다음 문장을 떠올리고 있어요...</p>`;
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{
+                        parts: [{
+                            text: `초등학생들이 돌아가며 한 문장씩 동화를 쓰고 있어. 지금까지의 이야기는 다음과 같아:\n"${storyText}"\n\n이 뒤에 자연스럽고 재미있게 이어질 만한 초등학생 눈높이의 다음 문장 아이디어 3가지를 제안해줘. 각 문장은 한국어로 한 문장씩, 존댓말(~했어요, ~이었어요)로 짧고 밝게 써줘.`
+                        }]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: { type: "STRING" }
+                        }
+                    }
+                };
+
+                const res = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const hints = JSON.parse(rawText);
+
+                if (Array.isArray(hints) && hints.length > 0) {
+                    ideaBox.innerHTML = `
+                        <div class="space-y-2 animate-pop">
+                            <p class="font-bold text-indigo-700 text-xs sm:text-sm">✨ 마음에 드는 힌트를 누르면 입력창에 들어가요! (조금 바꿔 써도 좋아요)</p>
+                            <div class="flex flex-col gap-1.5">
+                                ${hints.slice(0, 3).map(h => `
+                                    <button
+                                        type="button"
+                                        onclick="useHintSentence(${JSON.stringify(h).replace(/"/g, '&quot;')})"
+                                        class="text-left bg-white hover:bg-indigo-100 text-slate-700 px-3.5 py-2 rounded-xl border border-indigo-200 text-xs sm:text-sm transition"
+                                    >💡 ${escapeHtml(h)}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Empty hints');
+                }
+            } catch (err) {
+                ideaBox.innerHTML = `<p class="text-rose-500 font-bold text-xs sm:text-sm">앗, AI 요정이 잠시 쉬고 있어요. 대신 '🎲 단어 주사위'를 굴려보세요!</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✨ AI 문장 힌트 받기';
+            }
+        }
+
+        function useHintSentence(sentence) {
+            const input = document.getElementById('sentence-input');
+            input.value = sentence.slice(0, 120);
+            updateCharCount();
+            input.focus();
+        }
+
+        // 7-2. AI 제목 & 칭찬 받기 (gemini-3-flash-preview + Structured JSON)
+        async function generateTitleAndPraise() {
+            const btn = document.getElementById('btn-ai-title');
+            const storyText = state.story.map(s => s.text).join(' ');
+            const names = state.players.map(p => p.name).join(', ');
+
+            btn.disabled = true;
+            btn.textContent = '🏷️ 제목 짓는 중...';
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{
+                        parts: [{
+                            text: `초등학생 작가들(${names})이 돌아가며 한 문장씩 완성한 동화야:\n"${storyText}"\n\n이 동화에 딱 어울리는 귀엽고 멋진 동화 제목 1개와, 아이들의 상상력과 협동심을 따뜻하게 칭찬하는 초등학교 선생님 말투의 칭찬 메시지(2~3문장)를 만들어줘.`
+                        }]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                title: { type: "STRING" },
+                                praise: { type: "STRING" }
+                            },
+                            propertyOrdering: ["title", "praise"]
+                        }
+                    }
+                };
+
+                const res = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const parsed = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text);
+
+                if (parsed.title) {
+                    state.bookTitle = parsed.title;
+                    document.getElementById('book-title-input').value = parsed.title;
+                }
+                if (parsed.praise) {
+                    state.aiPraise = parsed.praise;
+                    document.getElementById('ai-praise-box').classList.remove('hidden');
+                    document.getElementById('ai-praise-text').textContent = parsed.praise;
+                }
+                saveToLocalStorage();
+                showToast('멋진 제목과 선생님의 칭찬이 도착했어요! 🌟', 'success');
+            } catch (err) {
+                showToast('제목과 칭찬을 불러오지 못했어요. 다시 한 번 눌러주세요!', 'warn');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🏷️ AI 제목 & 칭찬 받기';
+            }
+        }
+
+        // 7-3. AI 동화 표지 그리기 (gemini-3.1-flash-lite-image)
+        async function generateCoverImage() {
+            const btn = document.getElementById('btn-ai-cover');
+            const container = document.getElementById('cover-image-container');
+            const loading = document.getElementById('cover-loading');
+            const img = document.getElementById('cover-image');
+            const storyText = state.story.map(s => s.text).join(' ');
+
+            btn.disabled = true;
+            btn.textContent = '🎨 그리는 중...';
+            container.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            img.classList.add('hidden');
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent?key=${apiKey}`;
+                const prompt = `A warm, colorful, whimsical children's picture book illustration in watercolor and pastel crayon style, no text, no letters, depicting this cute elementary school kids story: ${storyText}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseModalities: ['TEXT', 'IMAGE']
+                    }
+                };
+
+                const res = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const part = data?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+
+                if (part && part.inlineData?.data) {
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    state.aiCoverUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+                    img.src = state.aiCoverUrl;
+                    loading.classList.add('hidden');
+                    img.classList.remove('hidden');
+                    showToast('동화 표지 그림이 완성되었어요! 🎨', 'success');
+                } else {
+                    throw new Error('No image data');
+                }
+            } catch (err) {
+                loading.classList.add('hidden');
+                container.classList.add('hidden');
+                showToast('그림을 그리는 데 실패했어요. 잠시 후 다시 시도해 주세요!', 'warn');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎨 AI 동화 표지 그리기';
+            }
+        }
+
+        // 7-4. AI 동화 읽어주기 (gemini-2.5-flash-preview-tts)
+        async function readStoryAloud() {
+            const btn = document.getElementById('btn-ai-tts');
+            const title = document.getElementById('book-title-input').value || '우리들의 동화';
+            const storyText = state.story.map(s => s.text).join(' ');
+
+            btn.disabled = true;
+            btn.textContent = '🔊 목소리 준비 중...';
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{
+                        parts: [{
+                            text: `초등학생 아이들에게 동화책을 읽어주듯 밝고 다정하고 생동감 있게 읽어주세요: 제목, ${title}. ${storyText}`
+                        }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Leda" }
+                            }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+
+                const res = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const part = data?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
+
+                if (audioData && mimeType.startsWith('audio/')) {
+                    const rateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                    const pcmBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+
+                    if (state.audioUrl) URL.revokeObjectURL(state.audioUrl);
+                    state.audioUrl = URL.createObjectURL(wavBlob);
+
+                    const audioBox = document.getElementById('audio-player-box');
+                    const audioEl = document.getElementById('story-audio');
+                    audioEl.src = state.audioUrl;
+                    audioBox.classList.remove('hidden');
+                    audioEl.play().catch(() => {});
+                    showToast('동화 구연이 시작돼요! 🎧', 'success');
+                } else {
+                    throw new Error('No audio data');
+                }
+            } catch (err) {
+                // Gemini TTS 실패 시 브라우저 기본 음성합성으로 친절하게 폴백
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utter = new SpeechSynthesisUtterance(`${title}. ${storyText}`);
+                    utter.lang = 'ko-KR';
+                    utter.rate = 0.95;
+                    window.speechSynthesis.speak(utter);
+                    showToast('브라우저 목소리로 동화를 읽어드릴게요! 🔊', 'info');
+                } else {
+                    showToast('음성을 만들지 못했어요. 다시 시도해 주세요!', 'warn');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔊 동화 읽어주기';
+            }
+        }
+
+        // Base64 -> ArrayBuffer 변환 유틸리티
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Signed PCM16 -> WAV Blob 변환 유틸리티
+        function pcmToWav(pcm16, sampleRate) {
+            const numChannels = 1;
+            const bytesPerSample = 2;
+            const dataSize = pcm16.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            const writeString = (offset, str) => {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); // PCM chunk size
+            view.setUint16(20, 1, true);  // AudioFormat (PCM = 1)
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
+            view.setUint16(32, numChannels * bytesPerSample, true);
+            view.setUint16(34, 16, true); // BitsPerSample
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            let offset = 44;
+            for (let i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        /* =========================================================
+           8. UI 유틸리티 (토스트, 커스텀 모달, 색종이 효과, XSS 방지)
+        ========================================================= */
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                warn: 'bg-rose-500 text-white',
+                info: 'bg-slate-800 text-white'
+            };
+            const el = document.createElement('div');
+            el.className = `animate-pop ${colors[type] || colors.info} px-5 py-3 rounded-2xl shadow-lg font-bold text-sm sm:text-base text-center`;
+            el.textContent = message;
+            container.appendChild(el);
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => el.remove(), 300);
+            }, 2600);
+        }
+
+        function openConfirmModal(message, onConfirm) {
+            document.getElementById('confirm-modal-message').textContent = message;
+            confirmCallback = onConfirm;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            document.getElementById('confirm-modal-ok').onclick = () => {
+                closeConfirmModal();
+                if (typeof confirmCallback === 'function') confirmCallback();
+            };
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // 완성 축하 색종이 애니메이션
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.classList.remove('hidden');
+
+            const colors = ['#FF6B6B', '#FFD166', '#06D6A0', '#118AB2', '#8338EC', '#FF9F1C'];
+            const particles = Array.from({ length: 85 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * -canvas.height * 0.5,
+                w: Math.random() * 10 + 6,
+                h: Math.random() * 6 + 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx: (Math.random() - 0.5) * 4,
+                vy: Math.random() * 3 + 3,
+                angle: Math.random() * 360,
+                spin: (Math.random() - 0.5) * 10
+            }));
+
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.angle += p.spin;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.angle * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                    ctx.restore();
+                });
+
+                frame++;
+                if (frame < 150) {
+                    requestAnimationFrame(draw);
+                } else {
+                    canvas.classList.add('hidden');
+                }
+            }
+            draw();
+        }
+    </script>
+</body>
+</html>
